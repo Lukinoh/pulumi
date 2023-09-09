@@ -25,6 +25,7 @@ import {
     ProjectSettings,
     Stack,
     parseAndValidatePulumiVersion,
+    OutputStructure,
 } from "../../automation";
 import { ComponentResource, ComponentResourceOptions, Config, output } from "../../index";
 import { getTestOrg, getTestSuffix } from "./util";
@@ -787,6 +788,12 @@ describe("LocalWorkspace", () => {
     });
     // TODO[pulumi/pulumi#8061] flaky test
     xit(`supports stack outputs`, async () => {
+        interface ExpectedOutput {
+            "exp_static": string;
+            "exp_cfg": string;
+            "exp_secret": string;
+        }
+
         const program = async () => {
             const config = new Config();
             return {
@@ -797,9 +804,9 @@ describe("LocalWorkspace", () => {
         };
         const projectName = "import_export_node";
         const stackName = fullyQualifiedStackName(getTestOrg(), projectName, `int_test${getTestSuffix()}`);
-        const stack = await LocalWorkspace.createStack({ stackName, projectName, program });
+        const stack = await LocalWorkspace.createStack<ExpectedOutput>({ stackName, projectName, program });
 
-        const assertOutputs = (outputs: OutputMap) => {
+        const assertOutputs = (outputs: OutputMap<ExpectedOutput>) => {
             assert.strictEqual(Object.keys(outputs).length, 3, "expected to have 3 outputs");
             assert.strictEqual(outputs["exp_static"].value, "foo");
             assert.strictEqual(outputs["exp_static"].secret, false);
@@ -807,6 +814,8 @@ describe("LocalWorkspace", () => {
             assert.strictEqual(outputs["exp_cfg"].secret, false);
             assert.strictEqual(outputs["exp_secret"].value, "secret");
             assert.strictEqual(outputs["exp_secret"].secret, true);
+            // @ts-ignore To be replaced by @ts-expect-error when typescript version is updated >= 3.9
+            assert.strictEqual(outputs["randomString"], undefined);
         };
 
         try {

@@ -14,7 +14,7 @@
 
 import { ConfigMap, ConfigValue } from "./config";
 import { ProjectSettings } from "./projectSettings";
-import { OutputMap } from "./stack";
+import { OutputMap, OutputStructure } from "./stack";
 import { StackSettings } from "./stackSettings";
 import { TagMap } from "./tag";
 
@@ -25,7 +25,7 @@ import { TagMap } from "./tag";
  *
  * @alpha
  */
-export interface Workspace {
+export interface Workspace<Output extends OutputStructure> {
     /**
      * The working directory to run Pulumi CLI commands
      */
@@ -249,7 +249,7 @@ export interface Workspace {
      * Gets the current set of Stack outputs from the last Stack.up().
      * @param stackName the name of the stack.
      */
-    stackOutputs(stackName: string): Promise<OutputMap>;
+    stackOutputs(stackName: string): Promise<OutputMap<Output>>;
 }
 
 /**

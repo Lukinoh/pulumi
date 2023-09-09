@@ -14,7 +14,7 @@
 
 import { LocalWorkspace, LocalWorkspaceOptions } from "./localWorkspace";
 import { RemoteStack } from "./remoteStack";
-import { Stack } from "./stack";
+import { OutputStructure, Stack } from "./stack";
 
 /**
  * RemoteWorkspace is the execution context containing a single remote Pulumi project.
@@ -27,8 +27,8 @@ export class RemoteWorkspace {
      * @param args A set of arguments to initialize a RemoteStack with a remote Pulumi program from a Git repository.
      * @param opts Additional customizations to be applied to the Workspace.
      */
-    static async createStack(args: RemoteGitProgramArgs, opts?: RemoteWorkspaceOptions): Promise<RemoteStack> {
-        const ws = await createLocalWorkspace(args, opts);
+    static async createStack<Output extends OutputStructure>(args: RemoteGitProgramArgs, opts?: RemoteWorkspaceOptions): Promise<RemoteStack<Output>> {
+        const ws = await createLocalWorkspace<Output>(args, opts);
         const stack = await Stack.create(args.stackName, ws);
         return RemoteStack.create(stack);
     }
@@ -40,8 +40,8 @@ export class RemoteWorkspace {
      * @param args A set of arguments to initialize a RemoteStack with a remote Pulumi program from a Git repository.
      * @param opts Additional customizations to be applied to the Workspace.
      */
-    static async selectStack(args: RemoteGitProgramArgs, opts?: RemoteWorkspaceOptions): Promise<RemoteStack> {
-        const ws = await createLocalWorkspace(args, opts);
+    static async selectStack<Output extends OutputStructure>(args: RemoteGitProgramArgs, opts?: RemoteWorkspaceOptions): Promise<RemoteStack<Output>> {
+        const ws = await createLocalWorkspace<Output>(args, opts);
         const stack = await Stack.select(args.stackName, ws);
         return RemoteStack.create(stack);
     }
@@ -52,8 +52,8 @@ export class RemoteWorkspace {
      * @param args A set of arguments to initialize a RemoteStack with a remote Pulumi program from a Git repository.
      * @param opts Additional customizations to be applied to the Workspace.
      */
-    static async createOrSelectStack(args: RemoteGitProgramArgs, opts?: RemoteWorkspaceOptions): Promise<RemoteStack> {
-        const ws = await createLocalWorkspace(args, opts);
+    static async createOrSelectStack<Output extends OutputStructure>(args: RemoteGitProgramArgs, opts?: RemoteWorkspaceOptions): Promise<RemoteStack<Output>> {
+        const ws = await createLocalWorkspace<Output>(args, opts);
         const stack = await Stack.createOrSelect(args.stackName, ws);
         return RemoteStack.create(stack);
     }
@@ -152,10 +152,10 @@ export interface RemoteWorkspaceOptions {
     skipInstallDependencies?: boolean;
 }
 
-async function createLocalWorkspace(
+async function createLocalWorkspace<Output extends OutputStructure>(
     args: RemoteGitProgramArgs,
     opts?: RemoteWorkspaceOptions,
-): Promise<LocalWorkspace> {
+): Promise<LocalWorkspace<Output>> {
     if (!isFullyQualifiedStackName(args.stackName)) {
         throw new Error(`stack name "${args.stackName}" must be fully qualified.`);
     }

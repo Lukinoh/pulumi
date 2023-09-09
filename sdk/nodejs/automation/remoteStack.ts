@@ -14,20 +14,20 @@
 
 import { EngineEvent } from "./events";
 import { LocalWorkspace } from "./localWorkspace";
-import { DestroyResult, OutputMap, PreviewResult, RefreshResult, Stack, UpdateSummary, UpResult } from "./stack";
+import { DestroyResult, OutputMap, OutputStructure, PreviewResult, RefreshResult, Stack, UpdateSummary, UpResult } from "./stack";
 import { Deployment } from "./workspace";
 
 /**
  * RemoteStack is an isolated, independencly configurable instance of a Pulumi program that is
  * operated on remotely (up/preview/refresh/destroy).
  */
-export class RemoteStack {
+export class RemoteStack<Output extends OutputStructure = OutputStructure> {
     /** @internal */
-    static create(stack: Stack): RemoteStack {
-        return new RemoteStack(stack);
+    static create<Output extends OutputStructure>(stack: Stack<Output>): RemoteStack<Output> {
+        return new RemoteStack<Output>(stack);
     }
 
-    private constructor(private readonly stack: Stack) {
+    private constructor(private readonly stack: Stack<Output>) {
         const ws = stack.workspace;
         if (!(ws instanceof LocalWorkspace)) {
             throw new Error("expected workspace to be an instance of LocalWorkspace");
@@ -48,7 +48,7 @@ export class RemoteStack {
      *
      * @param opts Options to customize the behavior of the update.
      */
-    up(opts?: RemoteUpOptions): Promise<UpResult> {
+    up(opts?: RemoteUpOptions): Promise<UpResult<Output>> {
         return this.stack.up(opts);
     }
 
@@ -87,7 +87,7 @@ export class RemoteStack {
     /**
      * Gets the current set of Stack outputs from the last Stack.up().
      */
-    outputs(): Promise<OutputMap> {
+    outputs(): Promise<OutputMap<Output>> {
         return this.stack.outputs();
     }
 

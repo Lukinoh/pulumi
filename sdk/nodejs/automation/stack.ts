@@ -46,7 +46,7 @@ interface ReadlineResult {
  *
  * @alpha
  */
-export class Stack {
+export class Stack<Output extends OutputStructure> {
     /**
      * The name identifying the Stack.
      */
@@ -54,7 +54,7 @@ export class Stack {
     /**
      * The Workspace the Stack was created from.
      */
-    readonly workspace: Workspace;
+    readonly workspace: Workspace<Output>;
     private ready: Promise<any>;
     /**
      * Creates a new stack using the given workspace, and stack name.
@@ -63,8 +63,8 @@ export class Stack {
      * @param name The name identifying the Stack.
      * @param workspace The Workspace the Stack was created from.
      */
-    static async create(name: string, workspace: Workspace): Promise<Stack> {
-        const stack = new Stack(name, workspace, "create");
+    static async create<Output extends OutputStructure>(name: string, workspace: Workspace<Output>): Promise<Stack<Output>> {
+        const stack = new Stack<Output>(name, workspace, "create");
         await stack.ready;
         return stack;
     }
@@ -75,8 +75,8 @@ export class Stack {
      * @param name The name identifying the Stack.
      * @param workspace The Workspace the Stack was created from.
      */
-    static async select(name: string, workspace: Workspace): Promise<Stack> {
-        const stack = new Stack(name, workspace, "select");
+    static async select<Output extends OutputStructure>(name: string, workspace: Workspace<Output>): Promise<Stack<Output>> {
+        const stack = new Stack<Output>(name, workspace, "select");
         await stack.ready;
         return stack;
     }
@@ -89,12 +89,12 @@ export class Stack {
      * @param name The name identifying the Stack.
      * @param workspace The Workspace the Stack was created from.
      */
-    static async createOrSelect(name: string, workspace: Workspace): Promise<Stack> {
-        const stack = new Stack(name, workspace, "createOrSelect");
+    static async createOrSelect<Output extends OutputStructure>(name: string, workspace: Workspace<Output>): Promise<Stack<Output>> {
+        const stack = new Stack<Output>(name, workspace, "createOrSelect");
         await stack.ready;
         return stack;
     }
-    private constructor(name: string, workspace: Workspace, mode: StackInitMode) {
+    private constructor(name: string, workspace: Workspace<Output>, mode: StackInitMode) {
         this.name = name;
         this.workspace = workspace;
 
@@ -148,7 +148,7 @@ Event: ${line}\n${e.toString()}`);
      *
      * @param opts Options to customize the behavior of the update.
      */
-    async up(opts?: UpOptions): Promise<UpResult> {
+    async up(opts?: UpOptions): Promise<UpResult<Output>> {
         const args = ["up", "--yes", "--skip-preview"];
         let kind = execKind.local;
         let program = this.workspace.program;
@@ -614,7 +614,7 @@ Event: ${line}\n${e.toString()}`);
     /**
      * Gets the current set of Stack outputs from the last Stack.up().
      */
-    async outputs(): Promise<OutputMap> {
+    async outputs(): Promise<OutputMap<Output>> {
         return this.workspace.stackOutputs(this.name);
     }
     /**
@@ -743,12 +743,14 @@ export function fullyQualifiedStackName(org: string, project: string, stack: str
     return `${org}/${project}/${stack}`;
 }
 
-export interface OutputValue {
-    value: any;
+export type OutputStructure = {[key: string]: any};
+
+export interface OutputValue<V> {
+    value: V;
     secret: boolean;
 }
 
-export type OutputMap = { [key: string]: OutputValue };
+export type OutputMap<Output extends OutputStructure> = { [key in keyof Output]: OutputValue<Output[key]> };
 
 export interface UpdateSummary {
     // pre-update info
@@ -811,10 +813,10 @@ export type RawJSON = string;
 /**
  * The deployment output from running a Pulumi program update.
  */
-export interface UpResult {
+export interface UpResult<Output extends OutputStructure> {
     stdout: string;
     stderr: string;
-    outputs: OutputMap;
+    outputs: OutputMap<Output>;
     summary: UpdateSummary;
 }
 

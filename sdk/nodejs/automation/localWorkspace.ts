@@ -23,7 +23,7 @@ import { ConfigMap, ConfigValue } from "./config";
 import { minimumVersion } from "./minimumVersion";
 import { ProjectSettings } from "./projectSettings";
 import { RemoteGitProgramArgs } from "./remoteWorkspace";
-import { OutputMap, Stack } from "./stack";
+import { OutputMap, OutputStructure, Stack } from "./stack";
 import { StackSettings, stackSettingsSerDeKeys } from "./stackSettings";
 import { TagMap } from "./tag";
 import { Deployment, PluginInfo, PulumiFn, StackSummary, WhoAmIResult, Workspace } from "./workspace";
@@ -43,7 +43,7 @@ const SKIP_VERSION_CHECK_VAR = "PULUMI_AUTOMATION_API_SKIP_VERSION_CHECK";
  *
  * @alpha
  */
-export class LocalWorkspace implements Workspace {
+export class LocalWorkspace<Output extends OutputStructure = OutputStructure> implements Workspace<Output> {
     /**
      * The working directory to run Pulumi CLI commands
      */
@@ -112,8 +112,8 @@ export class LocalWorkspace implements Workspace {
      *
      * @param opts Options used to configure the Workspace
      */
-    static async create(opts: LocalWorkspaceOptions): Promise<LocalWorkspace> {
-        const ws = new LocalWorkspace(opts);
+    static async create<Output extends OutputStructure>(opts: LocalWorkspaceOptions): Promise<LocalWorkspace<Output>> {
+        const ws = new LocalWorkspace<Output>(opts);
         await ws.ready;
         return ws;
     }
@@ -125,7 +125,7 @@ export class LocalWorkspace implements Workspace {
      * @param args A set of arguments to initialize a Stack with a pre-configured Pulumi CLI program that already exists on disk.
      * @param opts Additional customizations to be applied to the Workspace.
      */
-    static async createStack(args: LocalProgramArgs, opts?: LocalWorkspaceOptions): Promise<Stack>;
+    static async createStack<Output extends OutputStructure>(args: LocalProgramArgs, opts?: LocalWorkspaceOptions): Promise<Stack<Output>>;
     /**
      * Creates a Stack with a LocalWorkspace utilizing the specified inline (in process) Pulumi program.
      * This program is fully debuggable and runs in process. If no Project option is specified, default project settings
@@ -135,8 +135,8 @@ export class LocalWorkspace implements Workspace {
      * @param args A set of arguments to initialize a Stack with and inline `PulumiFn` program that runs in process.
      * @param opts Additional customizations to be applied to the Workspace.
      */
-    static async createStack(args: InlineProgramArgs, opts?: LocalWorkspaceOptions): Promise<Stack>;
-    static async createStack(args: InlineProgramArgs | LocalProgramArgs, opts?: LocalWorkspaceOptions): Promise<Stack> {
+    static async createStack<Output extends OutputStructure>(args: InlineProgramArgs, opts?: LocalWorkspaceOptions): Promise<Stack<Output>>;
+    static async createStack<Output extends OutputStructure>(args: InlineProgramArgs | LocalProgramArgs, opts?: LocalWorkspaceOptions): Promise<Stack<Output>> {
         if (isInlineProgramArgs(args)) {
             return await this.inlineSourceStackHelper(args, Stack.create, opts);
         } else if (isLocalProgramArgs(args)) {
@@ -152,7 +152,7 @@ export class LocalWorkspace implements Workspace {
      * @param args A set of arguments to initialize a Stack with a pre-configured Pulumi CLI program that already exists on disk.
      * @param opts Additional customizations to be applied to the Workspace.
      */
-    static async selectStack(args: LocalProgramArgs, opts?: LocalWorkspaceOptions): Promise<Stack>;
+    static async selectStack<Output extends OutputStructure>(args: LocalProgramArgs, opts?: LocalWorkspaceOptions): Promise<Stack<Output>>;
     /**
      * Selects an existing Stack with a LocalWorkspace utilizing the specified inline (in process) Pulumi program.
      * This program is fully debuggable and runs in process. If no Project option is specified, default project settings
@@ -162,8 +162,8 @@ export class LocalWorkspace implements Workspace {
      * @param args A set of arguments to initialize a Stack with and inline `PulumiFn` program that runs in process.
      * @param opts Additional customizations to be applied to the Workspace.
      */
-    static async selectStack(args: InlineProgramArgs, opts?: LocalWorkspaceOptions): Promise<Stack>;
-    static async selectStack(args: InlineProgramArgs | LocalProgramArgs, opts?: LocalWorkspaceOptions): Promise<Stack> {
+    static async selectStack<Output extends OutputStructure>(args: InlineProgramArgs, opts?: LocalWorkspaceOptions): Promise<Stack<Output>>;
+    static async selectStack<Output extends OutputStructure>(args: InlineProgramArgs | LocalProgramArgs, opts?: LocalWorkspaceOptions): Promise<Stack<Output>> {
         if (isInlineProgramArgs(args)) {
             return await this.inlineSourceStackHelper(args, Stack.select, opts);
         } else if (isLocalProgramArgs(args)) {
@@ -180,7 +180,7 @@ export class LocalWorkspace implements Workspace {
      * @param args A set of arguments to initialize a Stack with a pre-configured Pulumi CLI program that already exists on disk.
      * @param opts Additional customizations to be applied to the Workspace.
      */
-    static async createOrSelectStack(args: LocalProgramArgs, opts?: LocalWorkspaceOptions): Promise<Stack>;
+    static async createOrSelectStack<Output extends OutputStructure>(args: LocalProgramArgs, opts?: LocalWorkspaceOptions): Promise<Stack<Output>>;
     /**
      * Creates or selects an existing Stack with a LocalWorkspace utilizing the specified inline Pulumi CLI program.
      * This program is fully debuggable and runs in process. If no Project option is specified, default project settings will be created
@@ -190,11 +190,11 @@ export class LocalWorkspace implements Workspace {
      * @param args A set of arguments to initialize a Stack with and inline `PulumiFn` program that runs in process.
      * @param opts Additional customizations to be applied to the Workspace.
      */
-    static async createOrSelectStack(args: InlineProgramArgs, opts?: LocalWorkspaceOptions): Promise<Stack>;
-    static async createOrSelectStack(
+    static async createOrSelectStack<Output extends OutputStructure>(args: InlineProgramArgs, opts?: LocalWorkspaceOptions): Promise<Stack<Output>>;
+    static async createOrSelectStack<Output extends OutputStructure>(
         args: InlineProgramArgs | LocalProgramArgs,
         opts?: LocalWorkspaceOptions,
-    ): Promise<Stack> {
+    ): Promise<Stack<Output>> {
         if (isInlineProgramArgs(args)) {
             return await this.inlineSourceStackHelper(args, Stack.createOrSelect, opts);
         } else if (isLocalProgramArgs(args)) {
@@ -202,26 +202,26 @@ export class LocalWorkspace implements Workspace {
         }
         throw new Error(`unexpected args: ${args}`);
     }
-    private static async localSourceStackHelper(
+    private static async localSourceStackHelper<Output extends OutputStructure>(
         args: LocalProgramArgs,
-        initFn: StackInitializer,
+        initFn: StackInitializer<Output>,
         opts?: LocalWorkspaceOptions,
-    ): Promise<Stack> {
+    ): Promise<Stack<Output>> {
         let wsOpts = { workDir: args.workDir };
         if (opts) {
             wsOpts = { ...opts, workDir: args.workDir };
         }
 
-        const ws = new LocalWorkspace(wsOpts);
+        const ws = new LocalWorkspace<Output>(wsOpts);
         await ws.ready;
 
         return await initFn(args.stackName, ws);
     }
-    private static async inlineSourceStackHelper(
+    private static async inlineSourceStackHelper<Output extends OutputStructure>(
         args: InlineProgramArgs,
-        initFn: StackInitializer,
+        initFn: StackInitializer<Output>,
         opts?: LocalWorkspaceOptions,
-    ): Promise<Stack> {
+    ): Promise<Stack<Output>> {
         let wsOpts: LocalWorkspaceOptions = { program: args.program };
         if (opts) {
             wsOpts = { ...opts, program: args.program };
@@ -245,7 +245,7 @@ export class LocalWorkspace implements Workspace {
             }
         }
 
-        const ws = new LocalWorkspace(wsOpts);
+        const ws = new LocalWorkspace<Output>(wsOpts);
         await ws.ready;
 
         return await initFn(args.stackName, ws);
@@ -693,7 +693,7 @@ export class LocalWorkspace implements Workspace {
      * Gets the current set of Stack outputs from the last Stack.up().
      * @param stackName the name of the stack.
      */
-    async stackOutputs(stackName: string): Promise<OutputMap> {
+    async stackOutputs(stackName: string): Promise<OutputMap<Output>> {
         // TODO: do this in parallel after this is fixed https://github.com/pulumi/pulumi/issues/6050
         const maskedResult = await this.runPulumiCmd(["stack", "output", "--json", "--stack", stackName]);
         const plaintextResult = await this.runPulumiCmd([
@@ -706,14 +706,14 @@ export class LocalWorkspace implements Workspace {
         ]);
         const maskedOuts = JSON.parse(maskedResult.stdout);
         const plaintextOuts = JSON.parse(plaintextResult.stdout);
-        const outputs: OutputMap = {};
+        const outputs: OutputStructure = {};
 
         for (const [key, value] of Object.entries(plaintextOuts)) {
             const secret = maskedOuts[key] === "[secret]";
             outputs[key] = { value, secret };
         }
 
-        return outputs;
+        return outputs as OutputMap<Output>;
     }
 
     /**
@@ -954,7 +954,7 @@ function getStackSettingsName(name: string): string {
     return parts[parts.length - 1];
 }
 
-type StackInitializer = (name: string, workspace: Workspace) => Promise<Stack>;
+type StackInitializer<Output extends OutputStructure> = (name: string, workspace: Workspace<Output>) => Promise<Stack<Output>>;
 
 function defaultProject(projectName: string) {
     const settings: ProjectSettings = { name: projectName, runtime: "nodejs", main: process.cwd() };
